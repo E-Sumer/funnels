@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, ChevronDown } from "lucide-react";
+import { TinyTooltip } from "../ui/tiny-tooltip";
 
 export interface AnomalyAlertConfig {
   id: string;
@@ -319,126 +320,14 @@ function LabelWithTip({ label, tip, compact = false }: { label: string; tip: str
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: compact ? 4 : 6 }}>
       <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{label}</span>
-      <TinyTooltip text={tip} />
+      <TinyTooltip text={tip}>
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#B0B7C3" strokeWidth={2} style={{ flexShrink: 0, cursor: "help" }}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" strokeLinecap="round" />
+          <circle cx="12" cy="8" r="1" fill="#B0B7C3" stroke="none" />
+        </svg>
+      </TinyTooltip>
     </div>
-  );
-}
-
-function TinyTooltip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  const timeoutRef = useRef<number | null>(null);
-  const triggerRef = useRef<HTMLSpanElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{
-    top: number;
-    left: number;
-    arrowLeft: number;
-    placement: "top" | "bottom";
-  }>({
-    top: 0,
-    left: 0,
-    arrowLeft: 16,
-    placement: "top",
-  });
-
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current || !tooltipRef.current) return;
-    const targetRect = triggerRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const safeLeft = 8;
-    const safeRight = window.innerWidth - 8;
-    const safeTop = 8;
-    const safeBottom = window.innerHeight - 8;
-
-    const anchorCenterX = targetRect.left + targetRect.width / 2;
-    let left = anchorCenterX - tooltipRect.width / 2;
-    if (left < safeLeft + 4) left = safeLeft + 4;
-    if (left + tooltipRect.width > safeRight - 4) left = safeRight - tooltipRect.width - 4;
-
-    const tooltipGap = 10;
-    let placement: "top" | "bottom" = "top";
-    let top = targetRect.top - tooltipRect.height - tooltipGap;
-    if (top < safeTop + 4) {
-      placement = "bottom";
-      top = targetRect.bottom + tooltipGap;
-      if (top + tooltipRect.height > safeBottom - 4) top = safeBottom - tooltipRect.height - 4;
-    }
-
-    const arrowLeft = Math.max(12, Math.min(tooltipRect.width - 12, anchorCenterX - left));
-    setPosition({ top, left, arrowLeft, placement });
-  }, [open]);
-
-  useEffect(() => () => {
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-  }, []);
-
-  return (
-    <span
-      ref={triggerRef}
-      onMouseEnter={() => {
-        timeoutRef.current = window.setTimeout(() => setOpen(true), 150);
-      }}
-      onMouseLeave={() => {
-        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-        setOpen(false);
-      }}
-      style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-    >
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#B0B7C3" strokeWidth={2} style={{ flexShrink: 0, cursor: "help" }}>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" strokeLinecap="round" />
-        <circle cx="12" cy="8" r="1" fill="#B0B7C3" stroke="none" />
-      </svg>
-      {open &&
-        createPortal(
-          <span
-            ref={tooltipRef}
-            style={{
-              position: "fixed",
-              left: position.left,
-              top: position.top,
-              maxWidth: 240,
-              background: "#0E1B34",
-              color: "#F8FAFC",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 14,
-              padding: "10px 12px",
-              boxShadow: "0 8px 22px rgba(15,23,42,0.22)",
-              fontSize: 11,
-              fontWeight: 500,
-              lineHeight: 1.3,
-              whiteSpace: "pre-line",
-              zIndex: 900,
-              pointerEvents: "none",
-            }}
-          >
-            <svg
-              width="16"
-              height="10"
-              viewBox="0 0 16 10"
-              style={{
-                position: "absolute",
-                left: position.arrowLeft - 8,
-                top: position.placement === "top" ? "100%" : -10,
-                transform: position.placement === "bottom" ? "rotate(180deg)" : "none",
-                overflow: "visible",
-              }}
-              aria-hidden="true"
-            >
-              <path
-                d="M8 10C7.2 10 6.4 9.64 5.88 9L0.8 2.6C0 1.6 0.72 0 2 0H14C15.28 0 16 1.6 15.2 2.6L10.12 9C9.6 9.64 8.8 10 8 10Z"
-                fill="#0E1B34"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="1"
-              />
-            </svg>
-            <div style={{ position: "relative", zIndex: 1, lineHeight: 1.36, fontSize: 13, fontWeight: 500, color: "#F8FAFC" }}>
-              {text}
-            </div>
-          </span>,
-          document.body,
-        )}
-    </span>
   );
 }
 

@@ -1,21 +1,43 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { Globe, Lock } from "lucide-react";
+import { TinyTooltip } from "../components/ui/tiny-tooltip";
 
-const MOCK_FUNNELS = [
-  { id: "1", name: "Q4 Checkout Conversion",          createdBy: "Sarah Jenkins",    createdDate: "Apr 12, 2025", lastUpdated: "2 hours ago"  },
-  { id: "2", name: "SaaS Onboarding Flow",            createdBy: "Alex Morgan",      createdDate: "Mar 28, 2025", lastUpdated: "Yesterday"    },
-  { id: "3", name: "Mobile Subscription Upsell",      createdBy: "Michael Chen",     createdDate: "Feb 15, 2025", lastUpdated: "3 days ago"   },
-  { id: "4", name: "Email Campaign Flow Tracking",    createdBy: "Elena Rodriguez",  createdDate: "Jan 22, 2025", lastUpdated: "Oct 15, 2024" },
-  { id: "5", name: "Netmera test app funnel stats",   createdBy: "System",           createdDate: "Jan 1, 2023",  lastUpdated: "Dec 31, 2023" },
+export type FunnelVisibility = "private" | "public";
+
+export type FunnelListRow = {
+  id: string;
+  name: string;
+  visibility: FunnelVisibility;
+  createdBy: string;
+  createdDate: string;
+  lastUpdated: string;
+};
+
+const MOCK_FUNNELS: FunnelListRow[] = [
+  { id: "1", name: "Q4 Checkout Conversion", visibility: "private", createdBy: "Sarah Jenkins", createdDate: "Apr 12, 2025", lastUpdated: "2 hours ago" },
+  { id: "2", name: "SaaS Onboarding Flow", visibility: "public", createdBy: "Alex Morgan", createdDate: "Mar 28, 2025", lastUpdated: "Yesterday" },
+  { id: "3", name: "Mobile Subscription Upsell", visibility: "private", createdBy: "Michael Chen", createdDate: "Feb 15, 2025", lastUpdated: "3 days ago" },
+  { id: "4", name: "Email Campaign Flow Tracking", visibility: "public", createdBy: "Elena Rodriguez", createdDate: "Jan 22, 2025", lastUpdated: "Oct 15, 2024" },
+  { id: "5", name: "Netmera test app funnel stats", visibility: "private", createdBy: "System", createdDate: "Jan 1, 2023", lastUpdated: "Dec 31, 2023" },
 ];
 
+/** Display name of the signed-in user; used to allow visibility edits only for funnels they created. */
+function getCurrentUserName(): string {
+  if (typeof window === "undefined") return "Sarah Jenkins";
+  return localStorage.getItem("funnelsCurrentUserName") || "Sarah Jenkins";
+}
+
 type MenuItem = "view" | "edit" | "duplicate" | "export" | "delete";
+
+const TABLE_COLS = "1fr 160px 160px 160px 160px 90px" as const;
 
 export function FunnelsListPage() {
   const navigate = useNavigate();
   const [search, setSearch]     = useState("");
   const [funnels, setFunnels]   = useState(MOCK_FUNNELS);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const currentUserName = useMemo(() => getCurrentUserName(), []);
 
   const filtered = funnels.filter((f) =>
     f.name.toLowerCase().includes(search.toLowerCase())
@@ -36,6 +58,12 @@ export function FunnelsListPage() {
     } else if (action === "view" || action === "edit") {
       navigate(`/funnel/${id}`);
     }
+  };
+
+  const toggleVisibility = (id: string) => {
+    setFunnels((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, visibility: f.visibility === "public" ? "private" : "public" } : f)),
+    );
   };
 
   return (
@@ -109,9 +137,9 @@ export function FunnelsListPage() {
           {/* Header */}
           <div
             className="grid border-b-2 border-[#ededed]"
-            style={{ gridTemplateColumns: "1fr 160px 160px 160px 90px" }}
+            style={{ gridTemplateColumns: TABLE_COLS }}
           >
-            {["Funnel Name", "Created By", "Created Date", "Last Updated", "Actions"].map((col, i) => (
+            {["Funnel Name", "Visibility", "Created By", "Created Date", "Last Updated", "Actions"].map((col, i) => (
               <div key={i} className="px-4 py-3 border-r border-[#ededed] last:border-0">
                 <span className="text-[12px] font-semibold text-[#212121]">{col}</span>
               </div>
@@ -124,7 +152,7 @@ export function FunnelsListPage() {
               key={funnel.id}
               className="grid border-b border-[#f5f5f5] last:border-0 group relative hover:bg-[#EDF9FF] transition-colors"
               style={{
-                gridTemplateColumns: "1fr 160px 160px 160px 90px",
+                gridTemplateColumns: TABLE_COLS,
                 background: ri % 2 === 1 ? "#FAFAFA" : "#FFFFFF",
               }}
             >
@@ -135,6 +163,13 @@ export function FunnelsListPage() {
                 >
                   {funnel.name}
                 </button>
+              </div>
+              <div className="px-4 py-3 flex items-center border-r border-[#f5f5f5]">
+                <FunnelVisibilityChip
+                  visibility={funnel.visibility}
+                  canEdit={funnel.createdBy === currentUserName}
+                  onToggle={() => toggleVisibility(funnel.id)}
+                />
               </div>
               <div className="px-4 py-3 flex items-center border-r border-[#f5f5f5]">
                 <span className="text-[13px] text-[#212121]">{funnel.createdBy}</span>
@@ -198,5 +233,49 @@ export function FunnelsListPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function FunnelVisibilityChip({
+  visibility,
+  canEdit,
+  onToggle,
+}: {
+  visibility: FunnelVisibility;
+  canEdit: boolean;
+  onToggle: () => void;
+}) {
+  const isPublic = visibility === "public";
+  const tip = canEdit
+    ? isPublic
+      ? "Click to make visible to Only me"
+      : "Click to make Public"
+    : "Only the funnel creator can change visibility";
+
+  return (
+    <TinyTooltip text={tip}>
+      <button
+        type="button"
+        onClick={() => {
+          if (canEdit) onToggle();
+        }}
+        className={`inline-flex items-center gap-1.5 rounded-full border-0 px-2.5 py-[3px] text-[12px] font-medium leading-tight ${
+          canEdit ? "cursor-pointer hover:brightness-[0.98]" : "cursor-default"
+        }`}
+        style={{
+          background: isPublic ? "#DBEAFE" : "#F3F4F6",
+          color: isPublic ? "#1E40AF" : "#6B7280",
+        }}
+        aria-label={isPublic ? "Public. Click to change to Only me." : "Only me. Click to change to Public."}
+        aria-pressed={isPublic}
+      >
+        {isPublic ? (
+          <Globe className="size-3.5 shrink-0" strokeWidth={2} aria-hidden style={{ color: "#1E40AF" }} />
+        ) : (
+          <Lock className="size-3.5 shrink-0" strokeWidth={2} aria-hidden style={{ color: "#6B7280" }} />
+        )}
+        {isPublic ? "Public" : "Only Me"}
+      </button>
+    </TinyTooltip>
   );
 }
