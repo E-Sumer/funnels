@@ -31,7 +31,6 @@ interface Props {
 }
 
 const EVAL_OPTIONS: Array<AnomalyAlertConfig["evaluation_interval"]> = ["Hourly", "Daily", "Weekly"];
-const NOTIFY_OPTIONS: Array<AnomalyAlertConfig["notify_at_most"]> = ["Hourly", "Daily", "Weekly"];
 const METRIC_PARAMS = ["iOS", "Android", "Web", "API"];
 const SYSTEM_EVENTS = [
   "Session Start",
@@ -61,7 +60,6 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
   const [direction, setDirection] = useState<AnomalyAlertConfig["direction"]>("decrease");
   const [thresholdValue, setThresholdValue] = useState("15");
   const [evaluationInterval, setEvaluationInterval] = useState<AnomalyAlertConfig["evaluation_interval"]>("Daily");
-  const [notifyAtMost, setNotifyAtMost] = useState<AnomalyAlertConfig["notify_at_most"]>("Daily");
   const [recipientInput, setRecipientInput] = useState("");
   const [recipients, setRecipients] = useState<string[]>([]);
   const [showAllRecipients, setShowAllRecipients] = useState(false);
@@ -77,7 +75,6 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
       setDirection(initialAlert.direction);
       setThresholdValue(String(initialAlert.threshold_value));
       setEvaluationInterval(initialAlert.evaluation_interval);
-      setNotifyAtMost(initialAlert.notify_at_most);
       setRecipients(initialAlert.recipients);
       setShowAllRecipients(false);
       setRecipientInput("");
@@ -89,7 +86,6 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
     setDirection("decrease");
     setThresholdValue("15");
     setEvaluationInterval("Daily");
-    setNotifyAtMost("Daily");
     setRecipients(inferredEmail ? [inferredEmail] : []);
     setShowAllRecipients(false);
     setTitle("");
@@ -142,7 +138,7 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
       threshold_unit: "percent",
       evaluation_interval: evaluationInterval,
       training_window_days: 120,
-      notify_at_most: notifyAtMost,
+      notify_at_most: "Daily",
       recipients,
     });
     onClose();
@@ -189,7 +185,10 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
             </div>
 
             <div>
-              <LabelWithTip label="When" tip="Select the metric that will be monitored for anomalies." />
+              <LabelWithTip
+                label="Select Funnel Event to Monitor"
+                tip="Select which step’s performance you want to track for anomalies."
+              />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <SearchableSelect value={metricEvent} onChange={setMetricEvent} options={metricEvents} placeholder="Select Event" />
                 <SearchableSelect value={metricParameter} onChange={setMetricParameter} options={METRIC_PARAMS} placeholder="Select Event Attribute (Optional)" />
@@ -232,26 +231,16 @@ export function AnomalyAlertsDialog({ open, onClose, onSave, steps: _steps = [],
                 {errors.threshold && <InlineError text={errors.threshold} />}
               </div>
               <div>
-                <LabelWithTip label="Evaluation Interval" tip="How often the system checks for anomalies." />
+                <LabelWithTip
+                  label="Evaluation Interval"
+                  tip="Defines how often the system checks for anomalies and sends alerts via email."
+                />
                 <SearchableSelect
                   value={evaluationInterval}
                   onChange={(value) => setEvaluationInterval(value as AnomalyAlertConfig["evaluation_interval"])}
                   options={EVAL_OPTIONS}
                   placeholder="Select interval"
                   searchable={false}
-                />
-              </div>
-            </div>
-
-            <SectionTitle text="Notification Preferences" />
-
-            <div>
-              <LabelWithTip label="Notify at most" tip="Limit how frequently you receive notifications." />
-              <div style={{ marginTop: 6 }}>
-                <SegmentedToggle
-                  value={notifyAtMost}
-                  onChange={setNotifyAtMost}
-                  options={NOTIFY_OPTIONS.map((item) => ({ value: item, label: item }))}
                 />
               </div>
             </div>
@@ -649,41 +638,6 @@ function SimpleSelect({
           pointerEvents: "none",
         }}
       />
-    </div>
-  );
-}
-
-function SegmentedToggle({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <div style={{ display: "inline-flex", border: "1px solid #E5E7EB", borderRadius: 8, overflow: "hidden" }}>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          style={{
-            height: 38,
-            border: "none",
-            borderRight: option !== options[options.length - 1] ? "1px solid #E5E7EB" : "none",
-            background: option.value === value ? "#EEF4FF" : "white",
-            color: option.value === value ? "#1E3A8A" : "#4B5563",
-            fontSize: 12,
-            fontWeight: 600,
-            padding: "0 12px",
-            cursor: "pointer",
-          }}
-        >
-          {option.label}
-        </button>
-      ))}
     </div>
   );
 }
